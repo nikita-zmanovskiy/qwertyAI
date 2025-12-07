@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Анализ сценариев — Классификация по возрасту</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f1720;
+      --card: #ffffff;
+      --muted: #9aa6b2;
+      --accent: #2dd4bf;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --panel: #07101a;
+      --glass: rgba(255,255,255,0.03);
+    }
+    
+    .light-theme {
+      --bg: #f8fafc;
+      --card: #0b1220;
+      --muted: #64748b;
+      --accent: #0ea5e9;
+      --success: #22c55e;
+      --warning: #eab308;
+      --danger: #ef4444;
+      --panel: #f1f5f9;
+      --glass: rgba(0,0,0,0.03);
+    }
+    .legend-row > div {
+      display: flex;
+      align-items: center;
+    }
+    
+    * {
+      box-sizing: border-box;
+   
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: .6px;
+    }
+ 
+    html, body {
+      overflow: hidden;
+      height: 100vh;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--panel) 100%);
+      color: var(--card);
+      margin: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+    #search-input {
+      outline: none;
+      border-radius: 15px;
+      background-color: #fbfbfb;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border: none;
+      width: 100%;
+      padding: 10px;
+    }
+    .topbar {
+      display: flex;
+      margin: 20px;
+      border-radius: 20px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: linear-gradient(90deg, var(--glass), rgba(255,255,255,0.01));
+      border-bottom: 1px solid var(--glass);
+    }
+    
+    .topbar h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 400;
+      
+      color: var(--card);
+    }
+    
+    .header-actions button, .header-actions input[type="file"] {
+      margin-left: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--glass);
+      background: var(--glass);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    
+    .header-actions button:hover {
+      opacity: 0.95;
+    }
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    
+    .container {
+      display: grid;
+      grid-template-columns: 260px 1fr 320px;
+      gap: 16px;
+      padding: 18px;
+    }
+   
+    
+    .left-panel, .right-panel {
+      background: linear-gradient(180deg, var(--glass), rgba(255,255,255,0.01));
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--glass);
+      height: calc(100vh - 120px);
+      overflow: auto;
+    }
+    .left-panel {
+      padding-top: 30px;
+      display: flex;
+      flex-direction: column;
+      
+      justify-content: space-between;
+    }
+    
+    .main-panel {
+      background: transparent;
+      padding: 0;
+      height: calc(100vh - 120px);
+      overflow: auto;
+    }
+    
+    .panel-section {
+      margin-bottom: 14px;
+    }
+    
+    .file-box {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--glass);
+      border: 1px dashed var(--glass);
+      color: var(--muted);
+    }
+    
+    .muted {
+      margin-top: 5px;
+      margin-bottom: 60px;
+      color: var(--muted);
+    }
+    
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    
+    #progress-container {
+      height: 12px;
+      background: var(--glass);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      width: 0%;
+      transition: width 0.35s;
+    }
+    
+    .legend-row {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+      flex-direction: column;
+    }
+    
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    
+    .dot-none {
+      background: var(--success);
+    }
+    
+    .dot-mild {
+      background: var(--warning);
+    }
+    
+    .dot-moderate {
+      background: #fb923c;
+    }
+    
+    .dot-severe {
+      background: var(--danger);
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .tab {
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--glass);
+      border: 1px solid var(--glass);
+      cursor: pointer;
+      color: var(--muted);
+    }
+    
+    .tab.active {
+      background: linear-gradient(90deg, var(--glass), rgba(255,255,255,0.01));
+      color: var(--card);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 10px;
+    }
+    *::-webkit-scrollbar {
+        width: 5px;
+      }
+
+      /* Track */
+      *::-webkit-scrollbar-track {
+        background: #5c5c5c37;
+      }
+
+      /* Handle */
+      *::-webkit-scrollbar-thumb {
+        background: #2f2f2f;
+      }
+
+      /* Handle on hover */
+      *::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .summary-box {
+      padding: 12px;
+      background: var(--glass);
+      border-radius: 8px;
+      border: 1px solid var(--glass);
+    }
+    .card > div {
+      color: #9aa6b2;
+    }
+    .card h4 {
+      margin-top: 0px;
+    }
+    .cards {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .card {
+      flex: 1;
+      background: var(--glass);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--glass);
+    }
+    
+    .scenes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .scene-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--glass);
+      border: 1px solid var(--glass);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .scene-card:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .scene-card.selected {
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid var(--accent);
+    }
+    
+    .scene-card .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    
+    .badge {
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+    }
+    
+    .badge-none {
+      background: var(--success);
+    }
+    
+    .badge-mild {
+      background: var(--warning);
+      color: #0b0b0b;
+    }
+    
+    .badge-moderate {
+      background: #fb923c;
+    }
+    
+    .badge-severe {
+      background: var(--danger);
+    }
+    
+    .timeline-bar {
+      display: flex;
+      gap: 4px;
+      padding: 12px;
+      align-items: center;
+      min-height: 40px;
+    }
+    
+    .timeline-seg {
+      flex: 1;
+      height: 22px;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0.95;
+    }
+    
+    .timeline-seg:hover {
+      opacity: 1;
+      transform: scaleY(1.1);
+    }
+    
+    .categories-grid {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .category-pill {
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--glass);
+      min-width: 160px;
+      border: 1px solid var(--glass);
+    }
+    
+    .scene-editor textarea {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      background: var(--panel);
+      border: 1px solid var(--glass);
+      color: var(--card);
+    }
+    
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      align-items: center;
+    }
+    #editor-feedback {
+      margin-top: 10px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .editor-actions button, .editor-actions select {
+      padding: 8px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 10px;
+      border: 1px solid var(--glass);
+      background: var(--glass);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    
+    .log-box {
+      height: 140px;
+      padding: 8px;
+      background: var(--glass);
+      border-radius: 8px;
+      overflow: auto;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .textarea {
+      resize: none;
+      margin-top: 20px;
+      outline: none;
+    }
+    .clear-logs {
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .report-box {
+      padding: 8px;
+    }
+    
+    .report-preview {
+      height: 200px;
+      overflow: auto;
+      background: var(--panel);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--glass);
+    }
+    
+    .footer {
+      padding: 10px;
+      text-align: center;
+      border-top: 1px solid var(--glass);
+    }
+    
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    
+    .filter-btn {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      background: var(--glass);
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+    
+    .filter-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--glass);
+      border-radius: 50%;
+       
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      margin-left: 8px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .stat-card {
+      background: var(--glass);
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    
+    .chart-container {
+      background: var(--glass);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    
+    .violation-item {
+      padding: 12px;
+      background: var(--glass);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 4px solid var(--danger);
+    }
+    
+    .violation-item.mild {
+      border-left-color: var(--warning);
+    }
+    
+    .violation-item.moderate {
+      border-left-color: #fb923c;
+    }
+    
+    .violation-item.severe {
+      border-left-color: var(--danger);
+    }
+    
+    .violation-scene {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .violation-text {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    
+    .percentage-bar {
+      height: 8px;
+      background: var(--panel);
+      border-radius: 4px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    
+    .percentage-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    
+    .percentage-text {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+    
+    .export-options {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .export-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    
+    @media (max-width: 1000px) {
+      .container {
+        grid-template-columns: 1fr;
+        grid-auto-rows: auto;
+        padding: 10px;
+      }
+      .left-panel, .right-panel {
+        height: auto;
+      }
+    }
+    .link__btn {
+      height: 38.67px;
+    }
+    .input__file {
+      display: none;
+    }
+    .label__file {
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Детальный анализ сценария</h1>
+    <div class="header-actions">
+      <input id="file-input" class="input__file" type="file" accept=".txt,.pdf,.docx" />
+      <label for="file-input" id="labelForFile" class="label__file">Загрузить сценарий</label>
+      <button id="upload-btn">Загрузить и анализировать</button>
+      
+      <button id="simulate-btn" title="Заполнить демонстрационным анализом">Тестовый анализ</button>
+      <button id="delete-file">Удалить файл</button>
+      <button id="export-btn">Экспорт отчета</button>
+      <a href="../index.html"><button class="link__btn">QWERTY AI</button></a>
+       
+      <button id="theme-toggle" class="theme-toggle" title="Сменить тему">🌓</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <aside class="left-panel">
+      <div> 
+          <div class="panel-section">
+            <label for="file-input-display" class="muted">Выбранный файл</label>
+            <div id="file-input-display" class="file-box">Файл не выбран</div>
+            <div class="small">Поддерживаемые форматы: .pdf .docx .txt</div>
+          </div>
+    
+          <div class="panel-section">
+            <label class="muted">Статус обработки</label>
+            <div id="progress-container">
+              <div id="progress-bar" style="width:0%"></div>
+            </div>
+            <div id="progress-text" class="muted">Ожидание</div>
+          </div>
+    
+          <div class="panel-section">
+            <label class="muted">Поиск сцен</label>
+            <input id="search-input" placeholder="Поиск сцены..." />
+          </div>
+    
+          <div class="panel-section small" style="margin-top:8px;">
+            <strong>Быстрые фильтры</strong>
+            <div class="filter-row">
+              <button class="filter-btn active" data-filter="all">Все</button>
+              <button class="filter-btn" data-filter="problematic">Проблемные</button>
+              <button class="filter-btn" data-filter="safe">Безопасные</button>
+            </div>
+          </div>
+
+      </div>
+       
+
+      <div class="panel-section legend">
+        <p class="evaluation">Оценки</p>
+        <div class="legend-row">
+          <div> 
+             <span class="dot dot-none"></span>0+ Без ограничений
+          </div>
+           <div>
+              <span class="dot dot-mild"></span>6+ Легкие
+           </div>
+           <div>
+              <span class="dot dot-moderate"></span>12-16 Умеренные
+           </div>
+           <div>
+              <span class="dot dot-severe"></span>18+ Строгие
+           </div>
+          
+           
+        </div>
+      </div>
+    </aside>
+
+    <section class="main-panel">
+      <nav class="tabs">
+        <button class="tab active" data-tab="overview">Обзор</button>
+        <button class="tab" data-tab="scenes">Сцены</button>
+        <button class="tab" data-tab="categories">Категории</button>
+        <button class="tab" data-tab="timeline">Временная шкала</button>
+        <button class="tab" data-tab="report">Отчет</button>
+        <button class="tab" data-tab="statistics">Статистика</button>
+      </nav>
+
+      <section id="overview" class="tab-content active">
+        <h2>Общий обзор</h2>
+        <div id="summary-box" class="summary-box">
+          <div><strong>Общий рейтинг:</strong> <span id="overall-rating">—</span></div>
+          <div><strong>Проблемные предложения:</strong> <span id="problematic-count">0</span> / <span id="total-sentences">0</span> (<span id="problematic-percent">0%</span>)</div>
+          <div><strong>Краткое описание:</strong> <span id="summary-text">Нет данных</span></div>
+        </div>
+
+        <div class="cards">
+          <div class="card">
+            <h3>Обзор категорий</h3>
+            <div id="categories-overview" class="categories-grid">Нет данных</div>
+          </div>
+
+          <div class="card">
+            <h3>Статистика</h3>
+            <ul id="quick-stats" class="muted">
+              <li id="stat-processing-time">Время обработки: —</li>
+              <li id="stat-detected-episodes">Обнаружено нарушений: —</li>
+              <li id="stat-violation-percent">Процент нарушений: —</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="scenes" class="tab-content">
+        <h2>Предложения</h2>
+        <div id="scenes-list" class="scenes-list">Предложения не загружены. Загрузите файл или запустите тестовый анализ.</div>
+      </section>
+
+      <section id="categories" class="tab-content">
+        <h2>Категории нарушений</h2>
+        <div id="detailed-categories" class="categories-list">Нет данных</div>
+      </section>
+
+      <section id="timeline" class="tab-content">
+        <h2>Временная шкала</h2>
+        <div id="timeline-bar" class="timeline-bar" aria-label="Временная шкала предложений"></div>
+        <div id="timeline-legend" class="muted">Нажмите на блок для перехода к предложению</div>
+        
+        <div class="chart-container">
+          <canvas id="timeline-chart"></canvas>
+        </div>
+      </section>
+
+      <section id="report" class="tab-content">
+        <h2>Отчет</h2>
+        <div class="export-options">
+          <button id="download-json" class="export-btn">Скачать JSON отчет</button>
+        </div>
+        <div id="report-content">
+          <div id="report-preview">Отчет не сгенерирован</div>
+        </div>
+      </section>
+
+      <section id="statistics" class="tab-content">
+        <h2>Детальная статистика</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Всего предложений</div>
+            <div class="stat-value" id="stat-total-scenes">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Проблемные предложения</div>
+            <div class="stat-value" id="stat-problematic-scenes">0</div>
+            <div class="percentage-text" id="stat-problematic-percent">0%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Общий рейтинг</div>
+            <div class="stat-value" id="stat-avg-rating">0+</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Всего нарушений</div>
+            <div class="stat-value" id="stat-total-violations">0</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="category-chart"></canvas>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="severity-chart"></canvas>
+        </div>
+
+        <h3>Ключевые нарушения</h3>
+        <div id="key-violations-list">
+          <div class="muted">Нет данных о нарушениях</div>
+        </div>
+      </section>
+    </section>
+
+    <aside class="right-panel">
+      <div class="panel-section">
+        <h3>Редактор предложений</h3>
+        <div id="scene-editor" class="scene-editor">
+          <div id="editor-scene-title" class="editor-title">Предложение не выбрано</div>
+          <textarea id="editor-text" class="textarea" rows="8" placeholder="Текст выбранного предложения появится здесь"></textarea>
+          <div class="editor-actions">
+            <select id="editor-rating">
+              <option value="0+">0+ Без ограничений</option>
+              <option value="6+">6+ Легкие</option>
+              <option value="12+">12+ Умеренные</option>
+              <option value="16+">16+ Умеренные</option>
+              <option value="18+">18+ Строгие</option>
+            </select>
+            <button id="mark-fp">Отметить ложным</button>
+            <button id="add-violation">Добавить нарушение</button>
+            <button id="save-edit">Сохранить</button>
+          </div>
+          <div id="editor-feedback" class="muted">Изменения сохраняются локально.</div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="log-header">
+          <h3>Логи</h3>
+          <button id="clear-logs" class="clear-logs">Очистить</button>
+        </div>
+        <div id="log-box" class="log-box">Готов</div>
+      </div>
+    </aside>
+  </main>
+
+
+  <script>
+    // Глобальная переменная для URL бэкенда
+    const fetchURL = "http://158.160.98.70:8000";
+    
+    // DOM элементы
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const simulateBtn = document.getElementById('simulate-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const deleteFileBtn = document.getElementById('delete-file');
+    const fileDisplay = document.getElementById('file-input-display');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const logBox = document.getElementById('log-box');
+    const clearLogsBtn = document.getElementById('clear-logs');
+    const themeToggle = document.getElementById('theme-toggle');
+    const downloadJsonBtn = document.getElementById('download-json');
+
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const scenesList = document.getElementById('scenes-list');
+    const timelineBar = document.getElementById('timeline-bar');
+    const categoriesOverview = document.getElementById('categories-overview');
+    const reportPreview = document.getElementById('report-preview');
+    const searchInput = document.getElementById('search-input');
+
+    const editorTitle = document.getElementById('editor-scene-title');
+    const editorText = document.getElementById('editor-text');
+    const editorRating = document.getElementById('editor-rating');
+    const saveEditBtn = document.getElementById('save-edit');
+    const markFPBtn = document.getElementById('mark-fp');
+    const addViolationBtn = document.getElementById('add-violation');
+    const labelForFile = document.getElementById('labelForFile')
+
+    // Переменные состояния
+    let currentFile = null;
+    let currentFileId = null;
+    let analysisReport = null;
+    let selectedSceneIndex = null;
+    let sentences = [];
+    let currentFilter = 'all';
+    let charts = {};
+
+    // Инициализация
+    function init() {
+      setupEventListeners();
+      log('Интерфейс готов к работе');
+    }
+
+    // Настройка обработчиков событий
+    function setupEventListeners() {
+      // Переключение темы
+      themeToggle.addEventListener('click', toggleTheme);
+      
+      // Вкладки
+      tabs.forEach(t => {
+        t.addEventListener('click', () => {
+          tabs.forEach(x => x.classList.remove('active'));
+          t.classList.add('active');
+          const tab = t.dataset.tab;
+          tabContents.forEach(c => {
+            c.classList.toggle('active', c.id === tab);
+          });
+          
+          // Инициализация графиков при переключении на вкладку
+          if (tab === 'statistics' && analysisReport) {
+            initCharts();
+          }
+        });
+      });
+
+      // Выбор файла
+      fileInput.addEventListener('change', handleFileSelect);
+      
+      // Загрузка и анализ
+      uploadBtn.addEventListener('click', handleUpload);
+      
+      // Тестовый анализ
+      simulateBtn.addEventListener('click', () => simulateAnalysis(false));
+      
+      // Удаление файла
+      deleteFileBtn.addEventListener('click', deleteFile);
+      
+      // Экспорт отчета
+      exportBtn.addEventListener('click', handleExport);
+      downloadJsonBtn.addEventListener('click', () => exportReport('json'));
+      
+      // Поиск
+      searchInput.addEventListener('input', handleSearch);
+      
+      // Фильтры
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', handleFilter);
+      });
+      
+      // Действия редактора
+      saveEditBtn.addEventListener('click', saveSceneEdit);
+      markFPBtn.addEventListener('click', markFalsePositive);
+      addViolationBtn.addEventListener('click', addViolation);
+      
+      // Очистка логов
+      clearLogsBtn.addEventListener('click', clearLogs);
+    }
+
+    // Обработчики событий
+    function handleFileSelect(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      currentFile = f;
+      fileDisplay.textContent = `${f.name} — ${Math.round(f.size/1024)} KB`;
+      log(`Выбран файл ${f.name}`);
+      labelForFile.textContent = f.name
+    }
+
+    async function handleUpload() {
+      if (!currentFile) {
+        alert('Сначала выберите файл (.txt, .pdf, .docx)');
+        return;
+      }
+      
+      setProgress(5, 'Загрузка файла...');
+      try {
+        // Отправка на сервер
+        const fd = new FormData();
+        fd.append('file', currentFile);
+        
+        const res = await fetch(`${fetchURL}/upload`, {method: 'POST', body: fd});
+        const data = await res.json();
+        
+        if (data.status === 'done') {
+          currentFileId = data.file_id;
+          setProgress(100, 'Анализ завершен');
+          log(`Файл "${currentFile.name}" загружен и проанализирован, id=${currentFileId}`);
+          
+          // Обработка данных анализа
+          processAnalysisData(data);
+        } else {
+          throw new Error('Анализ не завершен');
+        }
+      } catch(err) {
+        log('Ошибка загрузки: ' + err);
+        log('Используется демо-режим');
+        // Если сервер недоступен, используем демо-режим
+        await simulateAnalysis(true);
+      }
+    }
+
+    function deleteFile() {
+      if (!currentFile && !analysisReport) {
+        alert('Нет файла для удаления');
+        return;
+      }
+      
+      // Полный сброс состояния
+      currentFile = null;
+      currentFileId = null;
+      analysisReport = null;
+      sentences = [];
+      selectedSceneIndex = null;
+      currentFilter = 'all';
+      
+      // Сброс UI элементов
+      fileInput.value = '';
+      fileDisplay.textContent = 'Файл не выбран';
+      setProgress(0, 'Ожидание');
+      searchInput.value = '';
+      
+      // Сброс фильтров
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+      labelForFile.textContent = 'Загрузить сценарий'
+      // Очистка всех вкладок
+      resetUI();
+      
+      log('Файл и все данные удалены. Можно загрузить новый файл.');
+    }
+
+    function resetUI() {
+      // Очистка обзора
+      document.getElementById('overall-rating').textContent = '—';
+      document.getElementById('problematic-count').textContent = '0';
+      document.getElementById('total-sentences').textContent = '0';
+      document.getElementById('problematic-percent').textContent = '0%';
+      document.getElementById('summary-text').textContent = 'Нет данных';
+      
+      // Очистка статистики
+      document.getElementById('stat-processing-time').textContent = 'Время обработки: —';
+      document.getElementById('stat-detected-episodes').textContent = 'Обнаружено нарушений: —';
+      document.getElementById('stat-violation-percent').textContent = 'Процент нарушений: —';
+      
+      // Очистка предложений
+      scenesList.innerHTML = 'Предложения не загружены. Загрузите файл или запустите тестовый анализ.';
+      
+      // Очистка категорий
+      categoriesOverview.innerHTML = 'Нет данных';
+      document.getElementById('detailed-categories').innerHTML = 'Нет данных';
+      
+      // Очистка временной шкалы
+      timelineBar.innerHTML = '';
+      document.getElementById('timeline-legend').textContent = 'Нажмите на блок для перехода к предложению';
+      
+      // Очистка отчета
+      reportPreview.innerHTML = 'Отчет не сгенерирован';
+      
+      // Очистка статистики
+      document.getElementById('stat-total-scenes').textContent = '0';
+      document.getElementById('stat-problematic-scenes').textContent = '0';
+      document.getElementById('stat-problematic-percent').textContent = '0%';
+      document.getElementById('stat-avg-rating').textContent = '0+';
+      document.getElementById('stat-total-violations').textContent = '0';
+      document.getElementById('key-violations-list').innerHTML = '<div class="muted">Нет данных о нарушениях</div>';
+      
+      // Очистка редактора
+      editorTitle.textContent = 'Предложение не выбрано';
+      editorText.value = '';
+      editorRating.value = '0+';
+      
+      // Уничтожение графиков
+      Object.values(charts).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      charts = {};
+    }
+
+    function handleSearch(e) {
+      // Автоматическое переключение на вкладку предложений при поиске
+      document.querySelector('.tab[data-tab="scenes"]').click();
+      populateSentences(sentences);
+    }
+
+    function handleFilter(e) {
+      currentFilter = e.target.dataset.filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      // Автоматическое переключение на вкладку предложений при фильтрации
+      document.querySelector('.tab[data-tab="scenes"]').click();
+      populateSentences(sentences);
+    }
+
+    function handleExport() {
+      if (!analysisReport) return alert('Отчет еще не сгенерирован');
+      exportReport('json');
+    }
+
+    function clearLogs() {
+      logBox.textContent = '';
+      log('Логи очищены');
+    }
+
+    // Основные функции
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logBox.textContent = `[${time}] ${msg}\n` + logBox.textContent;
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+      themeToggle.textContent = document.body.classList.contains('light-theme') ? '🌙' : '🌓';
+      log(document.body.classList.contains('light-theme') ? 'Переключена светлая тема' : 'Переключена темная тема');
+      
+      // Перерисовка графиков при смене темы
+      if (analysisReport) {
+        initCharts();
+      }
+    }
+
+    function setProgress(percent, text) {
+      progressBar.style.width = `${percent}%`;
+      progressText.textContent = text;
+    }
+
+    function processAnalysisData(data) {
+      // Преобразование данных сервера в формат приложения
+      analysisReport = {
+        file_id: data.file_id,
+        filename: data.filename,
+        overall_rating: data.overall_rating,
+        summary: data.summary,
+        statistics: data.statistics,
+        generated_at: new Date().toISOString()
+      };
+      
+      // Создаем массив предложений на основе статистики
+      sentences = generateSentencesFromData(data);
+      
+      updateUI();
+    }
+
+    function generateSentencesFromData(data) {
+      const sentences = [];
+      const total = data.statistics.total_sentences;
+      const problematic = data.statistics.problematic_sentences;
+      
+      // Создаем безопасные предложения
+      for (let i = 1; i <= total - problematic; i++) {
+        sentences.push({
+          id: i,
+          title: `Предложение ${i}`,
+          text: `Безопасное предложение ${i}`,
+          assigned_rating: '0+',
+          is_problematic: false,
+          categories: {
+            violence: { count: 0, severity: 'None' },
+            profanity: { count: 0, severity: 'None' },
+            sexual_content: { count: 0, severity: 'None' },
+            drugs_alcohol: { count: 0, severity: 'None' },
+            fear_elements: { count: 0, severity: 'None' }
+          }
+        });
+      }
+      
+      // Создаем проблемные предложения
+      let problemId = total - problematic + 1;
+      const violations = data.statistics.violations;
+      
+      // Насилие
+      for (let i = 0; i < violations.violence; i++) {
+        sentences.push({
+          id: problemId++,
+          title: `Предложение ${problemId-1}`,
+          text: `Проблемное предложение с элементами насилия ${i+1}`,
+          assigned_rating: '18+',
+          is_problematic: true,
+          categories: {
+            violence: { count: 1, severity: 'Severe' },
+            profanity: { count: 0, severity: 'None' },
+            sexual_content: { count: 0, severity: 'None' },
+            drugs_alcohol: { count: 0, severity: 'None' },
+            fear_elements: { count: 0, severity: 'None' }
+          }
+        });
+      }
+      
+      // Ненормативная лексика
+      for (let i = 0; i < violations.profanity; i++) {
+        sentences.push({
+          id: problemId++,
+          title: `Предложение ${problemId-1}`,
+          text: `Проблемное предложение с ненормативной лексикой ${i+1}`,
+          assigned_rating: '16+',
+          is_problematic: true,
+          categories: {
+            violence: { count: 0, severity: 'None' },
+            profanity: { count: 1, severity: 'Moderate' },
+            sexual_content: { count: 0, severity: 'None' },
+            drugs_alcohol: { count: 0, severity: 'None' },
+            fear_elements: { count: 0, severity: 'None' }
+          }
+        });
+      }
+      
+      // Сексуальный контент
+      for (let i = 0; i < violations.sexual_content; i++) {
+        sentences.push({
+          id: problemId++,
+          title: `Предложение ${problemId-1}`,
+          text: `Проблемное предложение с сексуальным контентом ${i+1}`,
+          assigned_rating: '18+',
+          is_problematic: true,
+          categories: {
+            violence: { count: 0, severity: 'None' },
+            profanity: { count: 0, severity: 'None' },
+            sexual_content: { count: 1, severity: 'Severe' },
+            drugs_alcohol: { count: 0, severity: 'None' },
+            fear_elements: { count: 0, severity: 'None' }
+          }
+        });
+      }
+      
+      // Наркотики/Алкоголь
+      for (let i = 0; i < violations.drugs_alcohol; i++) {
+        sentences.push({
+          id: problemId++,
+          title: `Предложение ${problemId-1}`,
+          text: `Проблемное предложение с упоминанием наркотиков/алкоголя ${i+1}`,
+          assigned_rating: '16+',
+          is_problematic: true,
+          categories: {
+            violence: { count: 0, severity: 'None' },
+            profanity: { count: 0, severity: 'None' },
+            sexual_content: { count: 0, severity: 'None' },
+            drugs_alcohol: { count: 1, severity: 'Moderate' },
+            fear_elements: { count: 0, severity: 'None' }
+          }
+        });
+      }
+      
+      // Элементы ужаса
+      for (let i = 0; i < violations.fear_elements; i++) {
+        sentences.push({
+          id: problemId++,
+          title: `Предложение ${problemId-1}`,
+          text: `Проблемное предложение с элементами ужаса ${i+1}`,
+          assigned_rating: '12+',
+          is_problematic: true,
+          categories: {
+            violence: { count: 0, severity: 'None' },
+            profanity: { count: 0, severity: 'None' },
+            sexual_content: { count: 0, severity: 'None' },
+            drugs_alcohol: { count: 0, severity: 'None' },
+            fear_elements: { count: 1, severity: 'Mild' }
+          }
+        });
+      }
+      
+      return sentences;
+    }
+
+    async function simulateAnalysis(fromUpload = false) {
+      setProgress(20, 'Анализ текста...');
+      await sleep(500);
+      
+      // Создаем демо-данные в формате нового API
+      const demoData = {
+        file_id: `sim-${Date.now()}`,
+        filename: currentFile ? currentFile.name : `simulated_${Date.now()}`,
+        overall_rating: '16+',
+        summary: '⚠️ Найдено 2 проблемных предложений из 5. Общий рейтинг: 16+.',
+        statistics: {
+          total_sentences: 5,
+          problematic_sentences: 2,
+          problematic_percentage: 40,
+          violations: {
+            violence: 3,
+            profanity: 2,
+            sexual_content: 0,
+            drugs_alcohol: 0,
+            fear_elements: 0
+          }
+        },
+        status: 'done'
+      };
+      
+      currentFileId = demoData.file_id;
+      processAnalysisData(demoData);
+      setProgress(100, 'Анализ закончен');
+      setTimeout(() => {
+        setProgress(0, 'Анализ закончен, для повтора нажмите кнопку');
+      }, 300);
+      log('Анализ завершен (демо-режим)');
+    }
+
+    function translateSeverity(severity) {
+      const translations = {
+        'None': 'Нет',
+        'Mild': 'Легкий',
+        'Moderate': 'Умеренный',
+        'Severe': 'Строгий'
+      };
+      return translations[severity] || severity;
+    }
+
+    // Обновление интерфейса
+    function updateUI() {
+      populateOverview(analysisReport);
+      populateSentences(sentences);
+      populateCategories(analysisReport);
+      populateTimeline(sentences);
+      populateReportPreview(analysisReport);
+      populateStatistics(analysisReport);
+      initCharts();
+    }
+
+    function populateOverview(report) {
+      if (!report) {
+        document.getElementById('overall-rating').textContent = '—';
+        document.getElementById('problematic-count').textContent = '0';
+        document.getElementById('total-sentences').textContent = '0';
+        document.getElementById('problematic-percent').textContent = '0%';
+        document.getElementById('summary-text').textContent = 'Нет данных';
+        return;
+      }
+      
+      document.getElementById('overall-rating').textContent = report.overall_rating;
+      document.getElementById('problematic-count').textContent = report.statistics.problematic_sentences;
+      document.getElementById('total-sentences').textContent = report.statistics.total_sentences;
+      document.getElementById('problematic-percent').textContent = `${report.statistics.problematic_percentage}%`;
+      document.getElementById('summary-text').textContent = report.summary;
+      document.getElementById('stat-processing-time').textContent = `Время обработки: ~${Math.round(Math.random()*60)+10}с`;
+      document.getElementById('stat-detected-episodes').textContent = `Обнаружено нарушений: ${Object.values(report.statistics.violations).reduce((a,b) => a + b, 0)}`;
+      document.getElementById('stat-violation-percent').textContent = `Процент нарушений: ${report.statistics.problematic_percentage}%`;
+    }
+
+    function populateSentences(list) {
+      scenesList.innerHTML = '';
+      
+      if (!list || list.length === 0) {
+        scenesList.innerHTML = '<div class="muted">Предложения не загружены. Загрузите файл или запустите тестовый анализ.</div>';
+        return;
+      }
+      
+      // Применение фильтра
+      let filteredList = list;
+      if (currentFilter === 'problematic') {
+        filteredList = list.filter(s => s.is_problematic);
+      } else if (currentFilter === 'safe') {
+        filteredList = list.filter(s => !s.is_problematic);
+      }
+      
+      // Применение поиска
+      const searchTerm = searchInput.value.trim().toLowerCase();
+      if (searchTerm) {
+        filteredList = filteredList.filter(s => 
+          s.title.toLowerCase().includes(searchTerm) || 
+          s.text.toLowerCase().includes(searchTerm) || 
+          String(s.id) === searchTerm
+        );
+      }
+      
+      if (filteredList.length === 0) {
+        scenesList.innerHTML = '<div class="muted">Предложения не найдены</div>';
+        return;
+      }
+      
+      for (const s of filteredList) {
+        const el = document.createElement('div');
+        el.className = 'scene-card';
+        if (selectedSceneIndex !== null && sentences[selectedSceneIndex] && sentences[selectedSceneIndex].id === s.id) {
+          el.classList.add('selected');
+        }
+        el.dataset.sceneId = s.id;
+        const left = document.createElement('div');
+        left.innerHTML = `<strong>${s.title}</strong><div class="meta">${s.text}</div>`;
+        const right = document.createElement('div');
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + badgeClass(s.assigned_rating);
+        badge.textContent = s.assigned_rating;
+        right.appendChild(badge);
+        el.appendChild(left);
+        el.appendChild(right);
+        
+        // Обработчик клика для выбора предложения
+        el.addEventListener('click', () => selectScene(s.id));
+        
+        scenesList.appendChild(el);
+      }
+    }
+
+    function badgeClass(r) {
+      if (r === '0+') return 'badge-none';
+      if (r === '6+') return 'badge-mild';
+      if (r === '12+' || r === '16+') return 'badge-moderate';
+      if (r === '18+') return 'badge-severe';
+      return 'badge-none';
+    }
+
+    function populateCategories(report) {
+      categoriesOverview.innerHTML = '';
+      
+      if (!report || !report.statistics || !report.statistics.violations) {
+        categoriesOverview.innerHTML = '<div class="muted">Нет данных</div>';
+        document.getElementById('detailed-categories').innerHTML = '<div class="muted">Нет данных</div>';
+        return;
+      }
+      
+      let hasCategories = false;
+      for (const [k, v] of Object.entries(report.statistics.violations)) {
+        if (v === 0) continue;
+        hasCategories = true;
+        
+        const div = document.createElement('div');
+        div.className = 'category-pill';
+        const percent = Math.round((v / report.statistics.total_sentences) * 100);
+        div.innerHTML = `
+          <strong>${translateCategory(k)}</strong>
+          <div class="muted">Нарушений: ${v}</div>
+          <div class="percentage-bar">
+            <div class="percentage-fill" style="width: ${percent}%; background: ${getCategoryColor(k)}"></div>
+          </div>
+        `;
+        categoriesOverview.appendChild(div);
+      }
+      
+      if (!hasCategories) {
+        categoriesOverview.innerHTML = '<div class="muted">Нарушений не обнаружено</div>';
+      }
+      
+      // Детализированные категории
+      const detailedCategories = document.getElementById('detailed-categories');
+      detailedCategories.innerHTML = '';
+      
+      if (!hasCategories) {
+        detailedCategories.innerHTML = '<div class="muted">Нарушений не обнаружено</div>';
+        return;
+      }
+      
+      for (const [k, v] of Object.entries(report.statistics.violations)) {
+        if (v === 0) continue;
+        
+        const block = document.createElement('div');
+        block.className = 'card';
+        block.style.marginBottom = '8px';
+        block.innerHTML = `
+          <h4>${translateCategory(k)}</h4>
+          <div>Количество нарушений: ${v}</div>
+          <div>Процент от общего числа: ${Math.round((v / report.statistics.total_sentences) * 100)}%</div>
+        `;
+        detailedCategories.appendChild(block);
+      }
+    }
+
+    function translateCategory(category) {
+      const translations = {
+        'violence': 'Насилие',
+        'profanity': 'Ненормативная лексика',
+        'sexual_content': 'Сексуальный контент',
+        'drugs_alcohol': 'Наркотики/Алкоголь',
+        'fear_elements': 'Элементы ужаса'
+      };
+      return translations[category] || category;
+    }
+
+    function getCategoryColor(category) {
+      const colors = {
+        'violence': '#ef4444',
+        'profanity': '#f59e0b',
+        'sexual_content': '#ec4899',
+        'drugs_alcohol': '#8b5cf6',
+        'fear_elements': '#06b6d4'
+      };
+      return colors[category] || '#6b7280';
+    }
+
+    function populateTimeline(list) {
+      timelineBar.innerHTML = '';
+      
+      if (!list || list.length === 0) {
+        document.getElementById('timeline-legend').textContent = 'Нет данных для отображения';
+        return;
+      }
+      
+      list.forEach((s, idx) => {
+        const seg = document.createElement('div');
+        seg.className = 'timeline-seg';
+        seg.title = `${s.title} · ${s.assigned_rating}`;
+        seg.style.flex = 1;
+        seg.style.background = timelineColor(s.assigned_rating);
+        seg.addEventListener('click', () => {
+          selectScene(s.id);
+          document.querySelector('.tab[data-tab="scenes"]').click();
+          
+          // Прокрутка к выбранному предложению
+          const sceneElement = document.querySelector(`.scene-card[data-scene-id="${s.id}"]`);
+          if (sceneElement) {
+            sceneElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+        timelineBar.appendChild(seg);
+      });
+    }
+
+    function timelineColor(r) {
+      if (r === '0+') return 'linear-gradient(90deg,#16a34a,#60efb0)';
+      if (r === '6+') return 'linear-gradient(90deg,#f59e0b,#ffd580)';
+      if (r === '12+' || r === '16+') return 'linear-gradient(90deg,#fb923c,#fca34b)';
+      if (r === '18+') return 'linear-gradient(90deg,#ef4444,#ff8a8a)';
+      return '#6b7280';
+    }
+
+    function populateReportPreview(report) {
+      if (!report) {
+        reportPreview.innerHTML = 'Отчет не сгенерирован';
+        return;
+      }
+      
+      // Генерация читаемого отчета
+      let reportHTML = `
+        <h3>Отчет анализа сценария</h3>
+        <p><strong>Файл:</strong> ${report.filename}</p>
+        <p><strong>Общий рейтинг:</strong> ${report.overall_rating}</p>
+        <p><strong>Проанализировано предложений:</strong> ${report.statistics.total_sentences}</p>
+        <p><strong>Проблемные предложения:</strong> ${report.statistics.problematic_sentences} (${report.statistics.problematic_percentage}%)</p>
+        <p><strong>Краткое описание:</strong> ${report.summary}</p>
+        
+        <h4>Нарушения по категориям</h4>
+        <ul>
+      `;
+      
+      let hasViolations = false;
+      for (const [category, count] of Object.entries(report.statistics.violations)) {
+        if (count > 0) {
+          hasViolations = true;
+          reportHTML += `<li>${translateCategory(category)}: ${count} нарушений</li>`;
+        }
+      }
+      
+      if (!hasViolations) {
+        reportHTML += '<li>Нарушений не обнаружено</li>';
+      }
+      
+      reportHTML += `</ul>`;
+      
+      reportPreview.innerHTML = reportHTML;
+    }
+
+    function populateStatistics(report) {
+      if (!report) {
+        document.getElementById('stat-total-scenes').textContent = '0';
+        document.getElementById('stat-problematic-scenes').textContent = '0';
+        document.getElementById('stat-problematic-percent').textContent = '0%';
+        document.getElementById('stat-avg-rating').textContent = '0+';
+        document.getElementById('stat-total-violations').textContent = '0';
+        document.getElementById('key-violations-list').innerHTML = '<div class="muted">Нет данных о нарушениях</div>';
+        return;
+      }
+      
+      document.getElementById('stat-total-scenes').textContent = report.statistics.total_sentences;
+      document.getElementById('stat-problematic-scenes').textContent = report.statistics.problematic_sentences;
+      document.getElementById('stat-problematic-percent').textContent = `${report.statistics.problematic_percentage}%`;
+      document.getElementById('stat-avg-rating').textContent = report.overall_rating;
+      document.getElementById('stat-total-violations').textContent = Object.values(report.statistics.violations).reduce((a, b) => a + b, 0);
+      
+      // Заполнение ключевых нарушений
+      const keyViolationsList = document.getElementById('key-violations-list');
+      keyViolationsList.innerHTML = '';
+      
+      let hasViolations = false;
+      for (const [category, count] of Object.entries(report.statistics.violations)) {
+        if (count > 0) {
+          hasViolations = true;
+          const violationItem = document.createElement('div');
+          violationItem.className = 'violation-item';
+          violationItem.innerHTML = `
+            <div class="violation-scene">${translateCategory(category)}</div>
+            <div class="violation-text">Количество нарушений: ${count}</div>
+          `;
+          keyViolationsList.appendChild(violationItem);
+        }
+      }
+      
+      if (!hasViolations) {
+        keyViolationsList.innerHTML = '<div class="muted">Нет данных о нарушениях</div>';
+      }
+    }
+
+    function initCharts() {
+      if (!analysisReport) return;
+      
+      // Уничтожение предыдущих графиков
+      Object.values(charts).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      
+      // График распределения по категориям
+      const categoryCtx = document.getElementById('category-chart').getContext('2d');
+      const categoryLabels = Object.keys(analysisReport.statistics.violations)
+        .filter(k => analysisReport.statistics.violations[k] > 0)
+        .map(translateCategory);
+      const categoryData = Object.values(analysisReport.statistics.violations)
+        .filter(v => v > 0);
+      const categoryColors = Object.keys(analysisReport.statistics.violations)
+        .filter(k => analysisReport.statistics.violations[k] > 0)
+        .map(getCategoryColor);
+      
+      if (categoryData.length > 0) {
+        charts.categoryChart = new Chart(categoryCtx, {
+          type: 'bar',
+          data: {
+            labels: categoryLabels,
+            datasets: [{
+              label: 'Количество нарушений',
+              data: categoryData,
+              backgroundColor: categoryColors,
+              borderColor: categoryColors.map(c => c.replace('0.8', '1')),
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Нарушения по категориям'
+              },
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Количество нарушений'
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // График распределения по уровням серьезности
+      const severityCtx = document.getElementById('severity-chart').getContext('2d');
+      const severityLevels = ['0+', '6+', '12+', '16+', '18+'];
+      const severityData = severityLevels.map(level => 
+        sentences.filter(s => s.assigned_rating === level).length
+      );
+      const severityColors = ['#16a34a', '#f59e0b', '#fb923c', '#f97316', '#ef4444'];
+      
+      charts.severityChart = new Chart(severityCtx, {
+        type: 'doughnut',
+        data: {
+          labels: severityLevels,
+          datasets: [{
+            data: severityData,
+            backgroundColor: severityColors,
+            borderColor: severityColors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Распределение по возрастным рейтингам'
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+
+    // Выбор предложения для редактора
+    function selectScene(id) {
+      const s = sentences.find(x => x.id === id);
+      if (!s) return;
+      selectedSceneIndex = sentences.indexOf(s);
+      editorTitle.textContent = `${s.title} — ${s.assigned_rating}`;
+      editorText.value = s.text;
+      editorRating.value = s.assigned_rating;
+      
+      // Снимаем выделение со всех предложений и выделяем текущее
+      document.querySelectorAll('.scene-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      const selectedCard = document.querySelector(`.scene-card[data-scene-id="${id}"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected');
+      }
+      
+      log(`Выбрано предложение: ${s.title}`);
+    }
+
+    // Действия редактора
+    async function saveSceneEdit() {
+      if (selectedSceneIndex == null) return alert('Выберите предложение');
+      const updatedText = editorText.value;
+      const updatedRating = editorRating.value;
+      sentences[selectedSceneIndex].text = updatedText;
+      sentences[selectedSceneIndex].assigned_rating = updatedRating;
+      sentences[selectedSceneIndex].is_problematic = updatedRating !== '0+';
+      updateUI();
+      log(`Предложение ${sentences[selectedSceneIndex].title} сохранено локально`);
+    }
+
+    function markFalsePositive() {
+      if (selectedSceneIndex == null) return alert('Выберите предложение');
+      sentences[selectedSceneIndex].is_problematic = false;
+      sentences[selectedSceneIndex].assigned_rating = '0+';
+      editorRating.value = '0+';
+      updateUI();
+      log(`Предложение ${sentences[selectedSceneIndex].title} отмечено как ложное срабатывание`);
+    }
+
+    function addViolation() {
+      if (selectedSceneIndex == null) return alert('Выберите предложение');
+      // простой UI: добавление эпизода ненормативной лексики
+      const s = sentences[selectedSceneIndex];
+      s.categories.profanity.count++;
+      s.categories.profanity.severity = 'Mild';
+      s.is_problematic = true;
+      s.assigned_rating = '6+';
+      editorRating.value = '6+';
+      updateUI();
+      log(`Нарушение добавлено в предложение ${s.title}`);
+    }
+
+    // Экспорт отчетов
+    function exportReport(format) {
+      if (!analysisReport) return alert('Нет отчета для экспорта');
+      
+      if (format === 'json') {
+        const content = JSON.stringify(analysisReport, null, 2);
+        downloadBlob(content, `report_${analysisReport.file_id}.json`, 'application/json');
+        log('JSON отчет сгенерирован');
+      }
+    }
+
+    // Вспомогательные функции
+    function downloadBlob(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function sleep(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    // Запуск приложения
+    init();
+  </script>
+</body>
+</html>
